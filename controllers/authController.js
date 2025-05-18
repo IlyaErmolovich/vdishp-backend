@@ -1,9 +1,5 @@
-const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 require('dotenv').config();
-
-// Захардкоженный секретный ключ (не использовать в реальных проектах!)
-const JWT_SECRET = 'super_простой_секретный_ключ_1234567890';
 
 // Регистрация нового пользователя
 exports.register = async (req, res) => {
@@ -18,16 +14,8 @@ exports.register = async (req, res) => {
     // Регистрация пользователя
     const user = await User.register(username, password);
 
-    // Создание JWT токена
-    const token = jwt.sign(
-      { id: user.id, username: user.username, role_id: user.role_id },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
     res.status(201).json({
       message: 'Пользователь успешно зарегистрирован',
-      token,
       user: {
         id: user.id,
         username: user.username,
@@ -52,16 +40,8 @@ exports.login = async (req, res) => {
     // Авторизация пользователя
     const user = await User.login(username, password);
 
-    // Создание JWT токена
-    const token = jwt.sign(
-      { id: user.id, username: user.username, role_id: user.role_id },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
     res.json({
       message: 'Авторизация успешна',
-      token,
       user: {
         id: user.id,
         username: user.username,
