@@ -36,7 +36,7 @@ app.use(session({
 }));
 
 // Доступ к статическим файлам
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '../frontend/build')));
 
 // Корневой маршрут для проверки API
 app.get('/api', (req, res) => {
@@ -61,19 +61,7 @@ app.use('/api/admin', adminRoutes);
 app.get('*', (req, res) => {
   // Исключаем API маршруты
   if (!req.url.startsWith('/api')) {
-    const indexPath = path.join(__dirname, 'public/index.html');
-    console.log('Попытка отправить файл:', indexPath);
-    try {
-      if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
-      } else {
-        console.error('Файл не найден:', indexPath);
-        res.status(404).send('Файл index.html не найден');
-      }
-    } catch (error) {
-      console.error('Ошибка при отправке файла:', error);
-      res.status(500).send('Ошибка сервера при отправке файла');
-    }
+    res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
   } else {
     res.status(404).json({ message: 'Маршрут не найден' });
   }
