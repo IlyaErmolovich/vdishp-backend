@@ -1,67 +1,81 @@
 const multer = require('multer');
 const sharp = require('sharp');
 
-// Используем память вместо диска для хранения загруженных файлов
+// Настраиваем хранилище для загрузки временных файлов
 const storage = multer.memoryStorage();
 
-// Фильтр для проверки типа файла
-const fileFilter = (req, file, cb) => {
-  // Принимаем только изображения
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Разрешены только изображения!'), false);
-  }
-};
-
-// Настройка загрузки
+// Создаем middleware для загрузки файлов
 const upload = multer({
   storage: storage,
-  fileFilter: fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
+    fileSize: 5 * 1024 * 1024, // 5MB макс размер файла
+  },
+  fileFilter: (req, file, cb) => {
+    // Проверяем тип файла
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Только изображения могут быть загружены'), false);
+    }
   }
 });
 
-// Middleware для обработки загруженных файлов
+// Middleware для обработки загруженного изображения
 const processUploadedFile = async (req, res, next) => {
   try {
-    // Если файл был загружен
-    if (req.file) {
-      // Сжимаем изображение с помощью sharp
-      let processedImage;
-      
-      try {
-        // Обрабатываем изображение - уменьшаем размер и качество
-        processedImage = await sharp(req.file.buffer)
-          .resize({ width: 500, height: 500, fit: 'inside' })
-          .jpeg({ quality: 70 })
-          .toBuffer();
-      } catch (err) {
-        console.error('Ошибка при обработке изображения:', err);
-        // Если произошла ошибка при обработке, используем оригинальный буфер
-        processedImage = req.file.buffer;
+    const file = req.file;
+
+    if (!file) {
+      console.log('Файл не был загружен, продолжаем без обработки изображения');
+      // Проверяем, что genres и platforms остаются массивами
+      if (req.body.genres && !Array.isArray(req.body.genres)) {
+        console.log('Преобразуем genres в массив...');
+        req.body.genres = Array.isArray(req.body.genres) ? req.body.genres : [req.body.genres];
       }
       
-      // Создаем объект с данными об изображении
-      const imageData = {
-        data: processedImage.toString('base64'),
-        contentType: 'image/jpeg', // Всегда используем JPEG для сжатых изображений
-        filename: req.file.originalname
-      };
+      if (req.body.platforms && !Array.isArray(req.body.platforms)) {
+        console.log('Преобразуем platforms в массив...');
+        req.body.platforms = Array.isArray(req.body.platforms) ? req.body.platforms : [req.body.platforms];
+      }
+      return next();
+    }
+
+    console.log('Обрабатываем загруженное изображение...');
+    console.log('Тип файла:', file.mimetype);
+
+    let resizedImageBuffer;
+    try {
+      // Измененяем размер и оптимизируем изображение
+      resizedImageBuffer = await sharp(file.buffer)
+        .resize({ width: 800, height: 1200, fit: 'inside' })
+        .toBuffer();
       
-      // Проверяем размер данных после конвертации в base64
-      const base64Size = imageData.data.length;
-      console.log(`Размер изображения после обработки: ${Math.round(base64Size / 1024)} KB`);
-      
-      // Заменяем объект файла на объект с данными изображения
-      req.fileData = imageData;
-      console.log('Файл успешно загружен и обработан');
+      console.log('Изображение успешно обработано');
+    } catch (sharpError) {
+      console.error('Ошибка при обработке изображения через sharp:', sharpError);
+      resizedImageBuffer = file.buffer; // В случае ошибки используем оригинальный буфер
+    }
+
+    // Сохраняем данные изображения для использования в следующем middleware
+    req.fileData = {
+      data: resizedImageBuffer.toString('base64'),
+      contentType: file.mimetype
+    };
+
+    // Проверяем, что genres и platforms остаются массивами
+    if (req.body.genres && !Array.isArray(req.body.genres)) {
+      console.log('Преобразуем genres в массив...');
+      req.body.genres = Array.isArray(req.body.genres) ? req.body.genres : [req.body.genres];
     }
     
+    if (req.body.platforms && !Array.isArray(req.body.platforms)) {
+      console.log('Преобразуем platforms в массив...');
+      req.body.platforms = Array.isArray(req.body.platforms) ? req.body.platforms : [req.body.platforms];
+    }
+
     next();
   } catch (error) {
-    console.error('Ошибка при обработке файла:', error);
+    console.error('Ошибка при обработке загруженного файла:', error);
     next(error);
   }
 };

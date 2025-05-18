@@ -67,28 +67,19 @@ exports.createGame = async (req, res) => {
       cover_image = 'placeholder';
     }
 
-    // Преобразуем строки в массивы, если они пришли в виде строк
-    if (typeof genres === 'string') {
-      genres = genres.split(',').map(g => g.trim());
-      console.log('Преобразованные жанры:', genres);
-    }
-    
-    if (typeof platforms === 'string') {
-      platforms = platforms.split(',').map(p => p.trim());
-      console.log('Преобразованные платформы:', platforms);
-    }
-
-    // Проверяем, что genres и platforms - массивы
-    if (!Array.isArray(genres)) {
-      console.log('Жанры не являются массивом, создаем пустой массив');
+    // Убедимся, что genres и platforms являются массивами
+    if (!genres) {
       genres = [];
+    } else if (!Array.isArray(genres)) {
+      genres = [genres]; // если пришла одна строка, преобразуем в массив
     }
     
-    if (!Array.isArray(platforms)) {
-      console.log('Платформы не являются массивом, создаем пустой массив');
+    if (!platforms) {
       platforms = [];
+    } else if (!Array.isArray(platforms)) {
+      platforms = [platforms]; // если пришла одна строка, преобразуем в массив
     }
-
+    
     console.log('Итоговые жанры перед созданием:', genres);
     console.log('Итоговые платформы перед созданием:', platforms);
 
@@ -147,43 +138,17 @@ exports.updateGame = async (req, res) => {
       console.log('Сохраняем новую обложку игры в БД');
     }
 
-    // Преобразуем строки в массивы, если они пришли в виде строк
-    if (typeof genres === 'string') {
-      genres = genres.split(',').map(g => g.trim());
-      console.log('Преобразованные жанры при обновлении:', genres);
-    }
-    
-    if (typeof platforms === 'string') {
-      platforms = platforms.split(',').map(p => p.trim());
-      console.log('Преобразованные платформы при обновлении:', platforms);
-    }
-
-    // Проверяем, что genres и platforms - массивы
-    if (!Array.isArray(genres)) {
-      console.log('Жанры не являются массивом, используем существующие');
+    // Убедимся, что genres и platforms являются массивами
+    if (!genres) {
       genres = existingGame.genres || [];
+    } else if (!Array.isArray(genres)) {
+      genres = [genres]; // если пришла одна строка, преобразуем в массив
     }
     
-    if (!Array.isArray(platforms)) {
-      console.log('Платформы не являются массивом, используем существующие');
+    if (!platforms) {
       platforms = existingGame.platforms || [];
-    }
-    
-    // Убедимся, что у игры есть несколько жанров
-    if (genres.length < 3) {
-      // Добавляем тестовые жанры для демонстрации
-      const allGenres = await Game.getAllGenres();
-      console.log("Добавляем дополнительные жанры для тестирования");
-      
-      // Берем первые 3 жанра из базы, если они еще не в списке
-      for (const genre of allGenres.slice(0, 3)) {
-        if (!genres.includes(genre.name)) {
-          genres.push(genre.name);
-          if (genres.length >= 3) break;
-        }
-      }
-      
-      console.log("Расширенный список жанров:", genres);
+    } else if (!Array.isArray(platforms)) {
+      platforms = [platforms]; // если пришла одна строка, преобразуем в массив
     }
 
     console.log('Итоговые жанры перед обновлением:', genres);
@@ -270,11 +235,13 @@ exports.getGameCover = async (req, res) => {
     
     // Если игра не найдена, отправляем заглушку
     if (!game) {
+      console.log(`Игра с ID ${gameId} не найдена, отправляем заглушку`);
       return res.status(404).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
     }
     
     // Если обложка не установлена, отправляем заглушку
     if (!game.cover_image || game.cover_image === 'placeholder') {
+      console.log(`Для игры ${game.title} (ID: ${gameId}) установлена заглушка вместо обложки`);
       return res.status(200).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
     }
     
@@ -283,17 +250,21 @@ exports.getGameCover = async (req, res) => {
     try {
       // Если строка, пытаемся распарсить JSON
       coverData = typeof game.cover_image === 'string' ? JSON.parse(game.cover_image) : game.cover_image;
+      console.log(`Успешно распарсили JSON данных обложки для игры ${game.title} (ID: ${gameId})`);
     } catch (parseError) {
       // Если ошибка парсинга, отправляем заглушку
+      console.error(`Ошибка парсинга JSON для обложки игры ${game.title} (ID: ${gameId}):`, parseError);
       return res.status(200).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
     }
     
     // Проверяем правильность данных
     if (!coverData || !coverData.data || !coverData.contentType) {
+      console.error(`Некорректные данные обложки для игры ${game.title} (ID: ${gameId})`);
       return res.status(200).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
     }
     
     // Отправляем изображение
+    console.log(`Отправляем обложку для игры ${game.title} (ID: ${gameId}), тип: ${coverData.contentType}`);
     res.set('Content-Type', coverData.contentType);
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.set('Pragma', 'no-cache');
@@ -301,8 +272,9 @@ exports.getGameCover = async (req, res) => {
     
     // Конвертируем Base64 в буфер и отправляем
     const imgBuffer = Buffer.from(coverData.data, 'base64');
-    res.send(imgBuffer);
+    return res.send(imgBuffer);
   } catch (error) {
+    console.error(`Ошибка при получении обложки игры (ID: ${req.params.id}):`, error);
     // При любой ошибке возвращаем заглушку
     return res.status(200).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
   }
