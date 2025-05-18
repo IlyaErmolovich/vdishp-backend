@@ -51,8 +51,11 @@ exports.createGame = async (req, res) => {
       // Преобразуем объект в JSON строку для хранения в БД
       cover_image = JSON.stringify(req.fileData);
       console.log('Сохраняем обложку игры в БД');
-    } else {
-      return res.status(400).json({ message: 'Необходимо загрузить обложку игры' });
+    }
+    // Если обложка не загружена для новой игры, используем заглушку
+    else {
+      console.log('Обложка не была загружена, устанавливаем заглушку');
+      cover_image = 'placeholder';
     }
 
     // Преобразуем строки в массивы, если они пришли в виде строк
@@ -85,15 +88,16 @@ exports.updateGame = async (req, res) => {
     const gameId = req.params.id;
     const { title, developer, publisher, release_date, genres, platforms } = req.body;
     
-    let cover_image = null;
+    // Получаем существующую игру для возможного сохранения обложки
+    const existingGame = await Game.getById(gameId);
+    
+    let cover_image = existingGame.cover_image;
     
     // Если загружена новая обложка
     if (req.fileData) {
       // Преобразуем объект в JSON строку для хранения в БД
       cover_image = JSON.stringify(req.fileData);
-      console.log('Сохраняем обложку игры в БД');
-    } else {
-      return res.status(400).json({ message: 'Необходимо загрузить обложку игры' });
+      console.log('Сохраняем новую обложку игры в БД');
     }
 
     // Преобразуем строки в массивы, если они пришли в виде строк
