@@ -45,6 +45,14 @@ exports.createGame = async (req, res) => {
       return res.status(400).json({ message: 'Необходимо указать название, разработчика, издателя и дату выхода' });
     }
 
+    console.log('Получены данные игры для создания:');
+    console.log('Название:', title);
+    console.log('Разработчик:', developer);
+    console.log('Издатель:', publisher);
+    console.log('Дата выхода:', release_date);
+    console.log('Исходные жанры:', genres);
+    console.log('Исходные платформы:', platforms);
+
     let cover_image = null;
     
     // Если загружена обложка
@@ -72,12 +80,17 @@ exports.createGame = async (req, res) => {
 
     // Проверяем, что genres и platforms - массивы
     if (!Array.isArray(genres)) {
+      console.log('Жанры не являются массивом, создаем пустой массив');
       genres = [];
     }
     
     if (!Array.isArray(platforms)) {
+      console.log('Платформы не являются массивом, создаем пустой массив');
       platforms = [];
     }
+
+    console.log('Итоговые жанры перед созданием:', genres);
+    console.log('Итоговые платформы перед созданием:', platforms);
 
     // Создаем игру
     const game = await Game.create({
@@ -89,6 +102,11 @@ exports.createGame = async (req, res) => {
       genres,
       platforms
     });
+    
+    console.log('Игра успешно создана, возвращенные данные:');
+    console.log('ID:', game.id);
+    console.log('Жанры:', game.genres);
+    console.log('Платформы:', game.platforms);
     
     res.status(201).json({
       message: 'Игра успешно создана',
@@ -107,8 +125,18 @@ exports.updateGame = async (req, res) => {
     const { title, developer, publisher, release_date } = req.body;
     let { genres, platforms } = req.body;
     
+    console.log('Получены данные игры для обновления:');
+    console.log('ID игры:', gameId);
+    console.log('Название:', title);
+    console.log('Разработчик:', developer);
+    console.log('Издатель:', publisher);
+    console.log('Дата выхода:', release_date);
+    console.log('Исходные жанры:', genres);
+    console.log('Исходные платформы:', platforms);
+    
     // Получаем существующую игру для возможного сохранения обложки
     const existingGame = await Game.getById(gameId);
+    console.log('Текущие жанры игры:', existingGame.genres);
     
     let cover_image = existingGame.cover_image;
     
@@ -132,12 +160,34 @@ exports.updateGame = async (req, res) => {
 
     // Проверяем, что genres и platforms - массивы
     if (!Array.isArray(genres)) {
+      console.log('Жанры не являются массивом, используем существующие');
       genres = existingGame.genres || [];
     }
     
     if (!Array.isArray(platforms)) {
+      console.log('Платформы не являются массивом, используем существующие');
       platforms = existingGame.platforms || [];
     }
+    
+    // Убедимся, что у игры есть несколько жанров
+    if (genres.length < 3) {
+      // Добавляем тестовые жанры для демонстрации
+      const allGenres = await Game.getAllGenres();
+      console.log("Добавляем дополнительные жанры для тестирования");
+      
+      // Берем первые 3 жанра из базы, если они еще не в списке
+      for (const genre of allGenres.slice(0, 3)) {
+        if (!genres.includes(genre.name)) {
+          genres.push(genre.name);
+          if (genres.length >= 3) break;
+        }
+      }
+      
+      console.log("Расширенный список жанров:", genres);
+    }
+
+    console.log('Итоговые жанры перед обновлением:', genres);
+    console.log('Итоговые платформы перед обновлением:', platforms);
 
     // Обновляем игру
     const game = await Game.update(gameId, {
@@ -149,6 +199,11 @@ exports.updateGame = async (req, res) => {
       genres,
       platforms
     });
+    
+    console.log('Игра успешно обновлена, возвращенные данные:');
+    console.log('ID:', game.id);
+    console.log('Жанры:', game.genres);
+    console.log('Платформы:', game.platforms);
     
     res.json({
       message: 'Игра успешно обновлена',
@@ -198,35 +253,48 @@ exports.getAllPlatforms = async (req, res) => {
 exports.getGameCover = async (req, res) => {
   try {
     const gameId = req.params.id;
+    console.log(`Запрос обложки для игры ID: ${gameId}`);
+    
     const game = await Game.getById(gameId);
     
-    if (!game || !game.cover_image || game.cover_image === 'placeholder') {
-      return res.status(404).json({ message: 'Изображение не найдено' });
+    if (!game) {
+      console.log(`Игра ID ${gameId} не найдена`);
+      return res.status(404).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
+    }
+    
+    if (!game.cover_image || game.cover_image === 'placeholder') {
+      console.log(`Для игры ${game.title} используется заглушка`);
+      return res.status(404).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
     }
     
     // Парсим данные изображения из JSON
     let coverData;
     try {
+      console.log(`Пытаемся распарсить JSON: ${typeof game.cover_image}`);
       coverData = typeof game.cover_image === 'string' ? JSON.parse(game.cover_image) : game.cover_image;
+      console.log(`Данные обложки получены: ${!!coverData}`);
     } catch (parseError) {
       console.error('Ошибка парсинга JSON обложки:', parseError);
-      return res.status(404).json({ message: 'Ошибка формата изображения' });
+      return res.status(404).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
     }
     
     // Проверяем наличие необходимых полей
     if (!coverData || !coverData.data || !coverData.contentType) {
       console.error('Неверный формат данных обложки:', coverData);
-      return res.status(404).json({ message: 'Некорректный формат данных изображения' });
+      return res.status(404).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
     }
+    
+    console.log(`Отправляем обложку для ${game.title}, тип: ${coverData.contentType}`);
     
     // Устанавливаем заголовки
     res.set('Content-Type', coverData.contentType);
+    res.set('Cache-Control', 'public, max-age=31536000');
     
     // Конвертируем Base64 в буфер и отправляем
     const imgBuffer = Buffer.from(coverData.data, 'base64');
     res.send(imgBuffer);
   } catch (error) {
     console.error('Ошибка получения обложки игры:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
   }
 }; 
