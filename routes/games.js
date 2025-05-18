@@ -13,6 +13,9 @@ router.get('/genres/all', gameController.getAllGenres);
 // Получение всех платформ
 router.get('/platforms/all', gameController.getAllPlatforms);
 
+// Получение обложки игры
+router.get('/cover/:id', gameController.getGameCover);
+
 // Получение игры по ID
 router.get('/:id', gameController.getGameById);
 

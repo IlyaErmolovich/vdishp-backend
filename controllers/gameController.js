@@ -47,8 +47,12 @@ exports.createGame = async (req, res) => {
     let cover_image = null;
     
     // Если загружена обложка
-    if (req.file) {
-      cover_image = `/uploads/${req.file.filename}`;
+    if (req.fileData) {
+      // Преобразуем объект в JSON строку для хранения в БД
+      cover_image = JSON.stringify(req.fileData);
+      console.log('Сохраняем обложку игры в БД');
+    } else {
+      return res.status(400).json({ message: 'Необходимо загрузить обложку игры' });
     }
 
     // Преобразуем строки в массивы, если они пришли в виде строк
@@ -84,8 +88,12 @@ exports.updateGame = async (req, res) => {
     let cover_image = null;
     
     // Если загружена новая обложка
-    if (req.file) {
-      cover_image = `/uploads/${req.file.filename}`;
+    if (req.fileData) {
+      // Преобразуем объект в JSON строку для хранения в БД
+      cover_image = JSON.stringify(req.fileData);
+      console.log('Сохраняем обложку игры в БД');
+    } else {
+      return res.status(400).json({ message: 'Необходимо загрузить обложку игры' });
     }
 
     // Преобразуем строки в массивы, если они пришли в виде строк
@@ -117,19 +125,8 @@ exports.deleteGame = async (req, res) => {
   try {
     const gameId = req.params.id;
     
-    // Получаем игру, чтобы удалить файл обложки
-    const game = await Game.getById(gameId);
-    
     // Удаляем игру из базы данных
     await Game.delete(gameId);
-    
-    // Если у игры была обложка, удаляем файл
-    if (game.cover_image) {
-      const coverPath = path.join(__dirname, '..', game.cover_image);
-      if (fs.existsSync(coverPath)) {
-        fs.unlinkSync(coverPath);
-      }
-    }
     
     res.json({ message: 'Игра успешно удалена' });
   } catch (error) {
@@ -153,6 +150,31 @@ exports.getAllPlatforms = async (req, res) => {
     const platforms = await Game.getAllPlatforms();
     res.json(platforms);
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Получение обложки игры
+exports.getGameCover = async (req, res) => {
+  try {
+    const gameId = req.params.id;
+    const game = await Game.getById(gameId);
+    
+    if (!game || !game.cover_image) {
+      return res.status(404).json({ message: 'Изображение не найдено' });
+    }
+    
+    // Парсим данные изображения из JSON
+    const coverData = typeof game.cover_image === 'string' ? JSON.parse(game.cover_image) : game.cover_image;
+    
+    // Устанавливаем заголовки
+    res.set('Content-Type', coverData.contentType);
+    
+    // Конвертируем Base64 в буфер и отправляем
+    const imgBuffer = Buffer.from(coverData.data, 'base64');
+    res.send(imgBuffer);
+  } catch (error) {
+    console.error('Ошибка получения обложки игры:', error);
     res.status(500).json({ message: error.message });
   }
 }; 
