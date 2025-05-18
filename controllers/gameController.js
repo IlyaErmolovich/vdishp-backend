@@ -233,16 +233,19 @@ exports.getGameCover = async (req, res) => {
     // Получаем данные игры
     const game = await Game.getById(gameId);
     
+    // Путь к placeholder изображению
+    const placeholderPath = path.join(__dirname, '../public/placeholder-game.jpg');
+    
     // Если игра не найдена, отправляем заглушку
     if (!game) {
       console.log(`Игра с ID ${gameId} не найдена, отправляем заглушку`);
-      return res.status(404).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
+      return res.status(404).sendFile(placeholderPath);
     }
     
     // Если обложка не установлена, отправляем заглушку
     if (!game.cover_image || game.cover_image === 'placeholder') {
       console.log(`Для игры ${game.title} (ID: ${gameId}) установлена заглушка вместо обложки`);
-      return res.status(200).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
+      return res.status(200).sendFile(placeholderPath);
     }
     
     // Проверяем наличие данных JSON
@@ -254,13 +257,13 @@ exports.getGameCover = async (req, res) => {
     } catch (parseError) {
       // Если ошибка парсинга, отправляем заглушку
       console.error(`Ошибка парсинга JSON для обложки игры ${game.title} (ID: ${gameId}):`, parseError);
-      return res.status(200).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
+      return res.status(200).sendFile(placeholderPath);
     }
     
     // Проверяем правильность данных
     if (!coverData || !coverData.data || !coverData.contentType) {
       console.error(`Некорректные данные обложки для игры ${game.title} (ID: ${gameId})`);
-      return res.status(200).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
+      return res.status(200).sendFile(placeholderPath);
     }
     
     // Отправляем изображение
@@ -276,6 +279,7 @@ exports.getGameCover = async (req, res) => {
   } catch (error) {
     console.error(`Ошибка при получении обложки игры (ID: ${req.params.id}):`, error);
     // При любой ошибке возвращаем заглушку
-    return res.status(200).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
+    const placeholderPath = path.join(__dirname, '../public/placeholder-game.jpg');
+    return res.status(200).sendFile(placeholderPath);
   }
 }; 

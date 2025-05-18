@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const session = require('express-session');
+const fs = require('fs');
 require('dotenv').config();
 
 // Импортируем базу данных
@@ -35,7 +36,7 @@ app.use(session({
 }));
 
 // Доступ к статическим файлам
-app.use(express.static(path.join(__dirname, '../frontend/build')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Корневой маршрут для проверки API
 app.get('/api', (req, res) => {
@@ -60,7 +61,19 @@ app.use('/api/admin', adminRoutes);
 app.get('*', (req, res) => {
   // Исключаем API маршруты
   if (!req.url.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
+    const indexPath = path.join(__dirname, 'public/index.html');
+    console.log('Попытка отправить файл:', indexPath);
+    try {
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        console.error('Файл не найден:', indexPath);
+        res.status(404).send('Файл index.html не найден');
+      }
+    } catch (error) {
+      console.error('Ошибка при отправке файла:', error);
+      res.status(500).send('Ошибка сервера при отправке файла');
+    }
   } else {
     res.status(404).json({ message: 'Маршрут не найден' });
   }
