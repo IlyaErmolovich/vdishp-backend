@@ -108,15 +108,20 @@ class User {
 
       // Если указан новый аватар, обновляем его
       if (avatar) {
+        // Преобразуем объект в JSON строку для хранения в БД
+        const avatarJSON = JSON.stringify(avatar);
+        console.log('Сохраняем аватар в БД');
+        
         await db.query(
           'UPDATE users SET avatar = ? WHERE id = ?',
-          [avatar, id]
+          [avatarJSON, id]
         );
       }
 
       // Получаем обновленные данные пользователя
       return await this.getById(id);
     } catch (error) {
+      console.error('Ошибка в модели при обновлении профиля:', error);
       throw error;
     }
   }
