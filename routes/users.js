@@ -13,7 +13,4 @@ router.get('/profile/:id', userController.getProfile);
 // Обновление профиля пользователя
 router.put('/profile', authMiddleware, uploadUserAvatar, userController.updateProfile);
 
-// Получение аватара пользователя
-router.get('/avatar/:id', userController.getUserAvatar);
-
 module.exports = router; 

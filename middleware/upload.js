@@ -1,92 +1,39 @@
 const multer = require('multer');
-const sharp = require('sharp');
+const path = require('path');
 
-// Настраиваем хранилище для загрузки временных файлов
-const storage = multer.memoryStorage();
-
-// Создаем middleware для загрузки файлов
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB макс размер файла
+// Настройка хранилища для загрузки файлов
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, '../uploads'));
   },
-  fileFilter: (req, file, cb) => {
-    // Проверяем тип файла
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Только изображения могут быть загружены'), false);
-    }
+  filename: (req, file, cb) => {
+    // Создаем уникальное имя файла с оригинальным расширением
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, uniqueSuffix + ext);
   }
 });
 
-// Middleware для обработки загруженного изображения
-const processUploadedFile = async (req, res, next) => {
-  try {
-    const file = req.file;
-
-    if (!file) {
-      console.log('Файл не был загружен, продолжаем без обработки изображения');
-      // Проверяем, что genres и platforms остаются массивами
-      if (req.body.genres && !Array.isArray(req.body.genres)) {
-        console.log('Преобразуем genres в массив...');
-        req.body.genres = Array.isArray(req.body.genres) ? req.body.genres : [req.body.genres];
-      }
-      
-      if (req.body.platforms && !Array.isArray(req.body.platforms)) {
-        console.log('Преобразуем platforms в массив...');
-        req.body.platforms = Array.isArray(req.body.platforms) ? req.body.platforms : [req.body.platforms];
-      }
-      return next();
-    }
-
-    console.log('Обрабатываем загруженное изображение...');
-    console.log('Тип файла:', file.mimetype);
-
-    let resizedImageBuffer;
-    try {
-      // Измененяем размер и оптимизируем изображение
-      resizedImageBuffer = await sharp(file.buffer)
-        .resize({ width: 800, height: 1200, fit: 'inside' })
-        .toBuffer();
-      
-      console.log('Изображение успешно обработано');
-    } catch (sharpError) {
-      console.error('Ошибка при обработке изображения через sharp:', sharpError);
-      resizedImageBuffer = file.buffer; // В случае ошибки используем оригинальный буфер
-    }
-
-    // Сохраняем данные изображения для использования в следующем middleware
-    req.fileData = {
-      data: resizedImageBuffer.toString('base64'),
-      contentType: file.mimetype
-    };
-
-    // Проверяем, что genres и platforms остаются массивами
-    if (req.body.genres && !Array.isArray(req.body.genres)) {
-      console.log('Преобразуем genres в массив...');
-      req.body.genres = Array.isArray(req.body.genres) ? req.body.genres : [req.body.genres];
-    }
-    
-    if (req.body.platforms && !Array.isArray(req.body.platforms)) {
-      console.log('Преобразуем platforms в массив...');
-      req.body.platforms = Array.isArray(req.body.platforms) ? req.body.platforms : [req.body.platforms];
-    }
-
-    next();
-  } catch (error) {
-    console.error('Ошибка при обработке загруженного файла:', error);
-    next(error);
+// Фильтр для проверки типа файла
+const fileFilter = (req, file, cb) => {
+  // Принимаем только изображения
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Разрешены только изображения!'), false);
   }
 };
 
-// Middleware для загрузки аватара пользователя
-const uploadUserAvatar = [upload.single('avatar'), processUploadedFile];
-
-// Middleware для загрузки обложки игры
-const uploadGameCover = [upload.single('cover_image'), processUploadedFile];
+// Настройка загрузки
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  }
+});
 
 module.exports = {
-  uploadUserAvatar,
-  uploadGameCover
+  uploadGameCover: upload.single('cover_image'),
+  uploadUserAvatar: upload.single('avatar')
 }; 

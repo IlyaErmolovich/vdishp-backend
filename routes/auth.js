@@ -9,9 +9,6 @@ router.post('/register', authController.register);
 // Авторизация пользователя
 router.post('/login', authController.login);
 
-// Выход из системы
-router.post('/logout', authMiddleware, authController.logout);
-
 // Получение информации о текущем пользователе
 router.get('/me', authMiddleware, authController.getMe);
 

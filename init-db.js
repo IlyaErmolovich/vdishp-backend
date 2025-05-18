@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS \`vdishp\`.\`users\` (
   \`username\` VARCHAR(45) NOT NULL,
   \`password\` TEXT NOT NULL,
   \`role_id\` INT NOT NULL,
-  \`avatar\` LONGTEXT NULL,
+  \`avatar\` TEXT NULL,
   PRIMARY KEY (\`id\`),
   UNIQUE INDEX \`username_UNIQUE\` (\`username\` ASC),
   INDEX \`role_id_idx\` (\`role_id\` ASC),

@@ -1,45 +1,21 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const session = require('express-session');
-const fs = require('fs');
 require('dotenv').config();
-
-// Импортируем базу данных
-const db = require('./config/db');
 
 // Создаем экземпляр приложения Express
 const app = express();
 
-// Настройка CORS с поддержкой куки
-const corsOptions = {
-  origin: ['http://localhost:3000', 'https://vdishp-frontend.onrender.com'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true // Разрешаем передачу куки в CORS-запросах
-};
-
 // Middleware
-app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Настройка сессий
-app.use(session({
-  secret: 'super_простой_секретный_ключ_1234567890',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 1 день
-  }
-}));
-
-// Доступ к статическим файлам
-app.use(express.static(path.join(__dirname, '../frontend/build')));
+// Статические файлы для загруженных изображений
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Корневой маршрут для проверки API
-app.get('/api', (req, res) => {
+app.get('/', (req, res) => {
   res.json({ message: 'API работает' });
 });
 
@@ -48,24 +24,12 @@ const authRoutes = require('./routes/auth');
 const gamesRoutes = require('./routes/games');
 const reviewsRoutes = require('./routes/reviews');
 const usersRoutes = require('./routes/users');
-const adminRoutes = require('./routes/admin');
 
 // Использование маршрутов
 app.use('/api/auth', authRoutes);
 app.use('/api/games', gamesRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/users', usersRoutes);
-app.use('/api/admin', adminRoutes);
-
-// Маршрут для всех остальных запросов, чтобы React Router работал при обновлении страницы
-app.get('*', (req, res) => {
-  // Исключаем API маршруты
-  if (!req.url.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
-  } else {
-    res.status(404).json({ message: 'Маршрут не найден' });
-  }
-});
 
 // Обработка ошибок
 app.use((err, req, res, next) => {

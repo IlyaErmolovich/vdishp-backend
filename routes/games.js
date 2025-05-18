@@ -13,12 +13,6 @@ router.get('/genres/all', gameController.getAllGenres);
 // Получение всех платформ
 router.get('/platforms/all', gameController.getAllPlatforms);
 
-// Добавление тестовых жанров ко всем играм
-router.get('/add-test-genres', gameController.addTestGenresToAllGames);
-
-// Получение обложки игры
-router.get('/cover/:id', gameController.getGameCover);
-
 // Получение игры по ID
 router.get('/:id', gameController.getGameById);
 

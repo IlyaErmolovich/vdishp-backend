@@ -4,44 +4,39 @@ require('dotenv').config();
 // Захардкоженный секретный ключ (не использовать в реальных проектах!)
 const JWT_SECRET = 'super_простой_секретный_ключ_1234567890';
 
-// Правильный middleware для авторизации
+// Middleware для проверки токена
 const authMiddleware = (req, res, next) => {
+  // Получаем токен из заголовка
+  const token = req.header('x-auth-token');
+
+  // Проверяем наличие токена
+  if (!token) {
+    return res.status(401).json({ message: 'Нет токена, авторизация отклонена' });
+  }
+
   try {
-    // Проверяем, есть ли данные пользователя в сессии (упрощенный подход)
-    const userId = req.session?.userId;
+    // Верифицируем токен
+    const decoded = jwt.verify(token, JWT_SECRET);
     
-    if (!userId) {
-      return res.status(401).json({ message: 'Требуется авторизация' });
-    }
-    
-    // Берем пользователя из сессии
-    req.user = req.session.user;
+    // Добавляем пользователя в объект запроса
+    req.user = decoded;
     next();
-  } catch (error) {
-    console.error('Ошибка в middleware авторизации:', error);
-    res.status(401).json({ message: 'Ошибка авторизации' });
+  } catch (err) {
+    res.status(401).json({ message: 'Токен недействителен' });
   }
 };
 
 // Middleware для проверки роли администратора
 const adminMiddleware = (req, res, next) => {
-  try {
-    // Проверяем, авторизован ли пользователь
-    if (!req.user) {
-      return res.status(401).json({ message: 'Требуется авторизация' });
-    }
-    
+  // Сначала проверяем токен
+  authMiddleware(req, res, () => {
     // Проверяем, является ли пользователь администратором
-    if (req.user.role_id !== 1) {
-      return res.status(403).json({ message: 'Доступ запрещен. Требуются права администратора' });
+    if (req.user && req.user.role_id === 1) {
+      next();
+    } else {
+      res.status(403).json({ message: 'Доступ запрещен. Требуются права администратора' });
     }
-    
-    // Пользователь администратор, пропускаем запрос
-    next();
-  } catch (error) {
-    console.error('Ошибка в middleware проверки роли администратора:', error);
-    res.status(403).json({ message: 'Ошибка проверки прав доступа' });
-  }
+  });
 };
 
 module.exports = {
