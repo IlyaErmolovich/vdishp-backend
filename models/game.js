@@ -121,10 +121,9 @@ class Game {
 
       // Добавляем жанры
       if (genres && genres.length > 0) {
-        for (const genreName of genres) {
+        const genrePromises = genres.map(async (genreName) => {
           try {
-            // Получаем ID жанра, используя подготовленные запросы для избежания проблем с кавычками
-            const [genreResults] = await db.query('SELECT id FROM genres WHERE name = ?', [genreName]);
+            const [genreResults] = await db.query('SELECT id FROM genres WHERE name = ?', [genreName.trim()]);
             
             if (genreResults.length > 0) {
               const genreId = genreResults[0].id;
@@ -132,21 +131,25 @@ class Game {
                 'INSERT INTO game_genres (game_id, genre_id) VALUES (?, ?)',
                 [newId, genreId]
               );
+              return true;
             } else {
               console.log(`Жанр не найден: ${genreName}`);
+              return false;
             }
           } catch (genreError) {
             console.error(`Ошибка при добавлении жанра "${genreName}":`, genreError);
+            return false;
           }
-        }
+        });
+        
+        await Promise.all(genrePromises);
       }
 
       // Добавляем платформы
       if (platforms && platforms.length > 0) {
-        for (const platformName of platforms) {
+        const platformPromises = platforms.map(async (platformName) => {
           try {
-            // Получаем ID платформы, используя подготовленные запросы
-            const [platformResults] = await db.query('SELECT id FROM platforms WHERE name = ?', [platformName]);
+            const [platformResults] = await db.query('SELECT id FROM platforms WHERE name = ?', [platformName.trim()]);
             
             if (platformResults.length > 0) {
               const platformId = platformResults[0].id;
@@ -154,13 +157,18 @@ class Game {
                 'INSERT INTO game_platforms (game_id, platform_id) VALUES (?, ?)',
                 [newId, platformId]
               );
+              return true;
             } else {
               console.log(`Платформа не найдена: ${platformName}`);
+              return false;
             }
           } catch (platformError) {
             console.error(`Ошибка при добавлении платформы "${platformName}":`, platformError);
+            return false;
           }
-        }
+        });
+        
+        await Promise.all(platformPromises);
       }
 
       return await this.getById(newId);
@@ -218,9 +226,9 @@ class Game {
           await db.query('DELETE FROM game_genres WHERE game_id = ?', [id]);
 
           // Добавляем новые жанры
-          for (const genreName of genres) {
+          const genrePromises = genres.map(async (genreName) => {
             try {
-              const [genreResults] = await db.query('SELECT id FROM genres WHERE name = ?', [genreName]);
+              const [genreResults] = await db.query('SELECT id FROM genres WHERE name = ?', [genreName.trim()]);
               
               if (genreResults.length > 0) {
                 const genreId = genreResults[0].id;
@@ -228,13 +236,18 @@ class Game {
                   'INSERT INTO game_genres (game_id, genre_id) VALUES (?, ?)',
                   [id, genreId]
                 );
+                return true;
               } else {
                 console.log(`Жанр не найден при обновлении: ${genreName}`);
+                return false;
               }
             } catch (genreError) {
               console.error(`Ошибка при обновлении жанра "${genreName}":`, genreError);
+              return false;
             }
-          }
+          });
+          
+          await Promise.all(genrePromises);
         } catch (genresError) {
           console.error('Ошибка при обновлении жанров:', genresError);
         }
@@ -247,9 +260,9 @@ class Game {
           await db.query('DELETE FROM game_platforms WHERE game_id = ?', [id]);
 
           // Добавляем новые платформы
-          for (const platformName of platforms) {
+          const platformPromises = platforms.map(async (platformName) => {
             try {
-              const [platformResults] = await db.query('SELECT id FROM platforms WHERE name = ?', [platformName]);
+              const [platformResults] = await db.query('SELECT id FROM platforms WHERE name = ?', [platformName.trim()]);
               
               if (platformResults.length > 0) {
                 const platformId = platformResults[0].id;
@@ -257,13 +270,18 @@ class Game {
                   'INSERT INTO game_platforms (game_id, platform_id) VALUES (?, ?)',
                   [id, platformId]
                 );
+                return true;
               } else {
                 console.log(`Платформа не найдена при обновлении: ${platformName}`);
+                return false;
               }
             } catch (platformError) {
               console.error(`Ошибка при обновлении платформы "${platformName}":`, platformError);
+              return false;
             }
-          }
+          });
+          
+          await Promise.all(platformPromises);
         } catch (platformsError) {
           console.error('Ошибка при обновлении платформ:', platformsError);
         }

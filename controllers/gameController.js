@@ -200,12 +200,24 @@ exports.getGameCover = async (req, res) => {
     const gameId = req.params.id;
     const game = await Game.getById(gameId);
     
-    if (!game || !game.cover_image) {
+    if (!game || !game.cover_image || game.cover_image === 'placeholder') {
       return res.status(404).json({ message: 'Изображение не найдено' });
     }
     
     // Парсим данные изображения из JSON
-    const coverData = typeof game.cover_image === 'string' ? JSON.parse(game.cover_image) : game.cover_image;
+    let coverData;
+    try {
+      coverData = typeof game.cover_image === 'string' ? JSON.parse(game.cover_image) : game.cover_image;
+    } catch (parseError) {
+      console.error('Ошибка парсинга JSON обложки:', parseError);
+      return res.status(404).json({ message: 'Ошибка формата изображения' });
+    }
+    
+    // Проверяем наличие необходимых полей
+    if (!coverData || !coverData.data || !coverData.contentType) {
+      console.error('Неверный формат данных обложки:', coverData);
+      return res.status(404).json({ message: 'Некорректный формат данных изображения' });
+    }
     
     // Устанавливаем заголовки
     res.set('Content-Type', coverData.contentType);
