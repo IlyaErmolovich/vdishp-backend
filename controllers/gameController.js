@@ -249,52 +249,61 @@ exports.getAllPlatforms = async (req, res) => {
   }
 };
 
+// Добавление тестовых жанров ко всем играм
+exports.addTestGenresToAllGames = async (req, res) => {
+  try {
+    const result = await Game.addTestGenresToAllGames();
+    res.json(result);
+  } catch (error) {
+    console.error('Ошибка при добавлении тестовых жанров:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Получение обложки игры
 exports.getGameCover = async (req, res) => {
   try {
     const gameId = req.params.id;
-    console.log(`Запрос обложки для игры ID: ${gameId}`);
     
+    // Получаем данные игры
     const game = await Game.getById(gameId);
     
+    // Если игра не найдена, отправляем заглушку
     if (!game) {
-      console.log(`Игра ID ${gameId} не найдена`);
       return res.status(404).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
     }
     
+    // Если обложка не установлена, отправляем заглушку
     if (!game.cover_image || game.cover_image === 'placeholder') {
-      console.log(`Для игры ${game.title} используется заглушка`);
-      return res.status(404).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
+      return res.status(200).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
     }
     
-    // Парсим данные изображения из JSON
+    // Проверяем наличие данных JSON
     let coverData;
     try {
-      console.log(`Пытаемся распарсить JSON: ${typeof game.cover_image}`);
+      // Если строка, пытаемся распарсить JSON
       coverData = typeof game.cover_image === 'string' ? JSON.parse(game.cover_image) : game.cover_image;
-      console.log(`Данные обложки получены: ${!!coverData}`);
     } catch (parseError) {
-      console.error('Ошибка парсинга JSON обложки:', parseError);
-      return res.status(404).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
+      // Если ошибка парсинга, отправляем заглушку
+      return res.status(200).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
     }
     
-    // Проверяем наличие необходимых полей
+    // Проверяем правильность данных
     if (!coverData || !coverData.data || !coverData.contentType) {
-      console.error('Неверный формат данных обложки:', coverData);
-      return res.status(404).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
+      return res.status(200).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
     }
     
-    console.log(`Отправляем обложку для ${game.title}, тип: ${coverData.contentType}`);
-    
-    // Устанавливаем заголовки
+    // Отправляем изображение
     res.set('Content-Type', coverData.contentType);
-    res.set('Cache-Control', 'public, max-age=31536000');
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     
     // Конвертируем Base64 в буфер и отправляем
     const imgBuffer = Buffer.from(coverData.data, 'base64');
     res.send(imgBuffer);
   } catch (error) {
-    console.error('Ошибка получения обложки игры:', error);
-    res.status(500).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
+    // При любой ошибке возвращаем заглушку
+    return res.status(200).sendFile(path.join(__dirname, '../../frontend/public/placeholder-game.jpg'));
   }
 }; 

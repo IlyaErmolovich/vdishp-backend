@@ -367,6 +367,67 @@ class Game {
       throw error;
     }
   }
+
+  // Добавление тестовых жанров для всех игр
+  static async addTestGenresToAllGames() {
+    try {
+      // Получаем все игры
+      const [games] = await db.query('SELECT id FROM games');
+      console.log(`Найдено ${games.length} игр для добавления жанров`);
+      
+      // Получаем все жанры
+      const [allGenres] = await db.query('SELECT id, name FROM genres');
+      console.log(`Найдено ${allGenres.length} жанров`);
+      
+      if (allGenres.length === 0) {
+        return { message: 'Нет доступных жанров' };
+      }
+      
+      // Для каждой игры добавляем несколько жанров
+      for (const game of games) {
+        const gameId = game.id;
+        
+        // Получаем текущие жанры игры
+        const [currentGenres] = await db.query(
+          'SELECT genre_id FROM game_genres WHERE game_id = ?', 
+          [gameId]
+        );
+        
+        console.log(`Игра ID ${gameId} имеет ${currentGenres.length} жанров`);
+        
+        // Если у игры меньше 3 жанров, добавляем новые
+        if (currentGenres.length < 3) {
+          // Создаем массив ID жанров, которые уже есть у игры
+          const existingGenreIds = currentGenres.map(g => g.genre_id);
+          
+          // Выбираем жанры, которых еще нет у игры
+          const genresToAdd = allGenres
+            .filter(genre => !existingGenreIds.includes(genre.id))
+            .slice(0, 5 - currentGenres.length); // Добавляем до 5 жанров
+          
+          console.log(`Добавляем ${genresToAdd.length} новых жанров для игры ${gameId}`);
+          
+          // Добавляем каждый жанр
+          for (const genre of genresToAdd) {
+            try {
+              await db.query(
+                'INSERT INTO game_genres (game_id, genre_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE game_id = game_id',
+                [gameId, genre.id]
+              );
+              console.log(`Жанр ${genre.name} (ID: ${genre.id}) добавлен к игре ${gameId}`);
+            } catch (error) {
+              console.error(`Ошибка при добавлении жанра ${genre.name} к игре ${gameId}:`, error);
+            }
+          }
+        }
+      }
+      
+      return { message: 'Тестовые жанры добавлены ко всем играм' };
+    } catch (error) {
+      console.error('Ошибка при добавлении тестовых жанров:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = Game; 
