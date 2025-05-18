@@ -14,4 +14,21 @@ const pool = mysql.createPool({
 
 const promisePool = pool.promise();
 
-module.exports = promisePool; 
+// Функция-обертка для логирования SQL запросов
+const logQuery = async (query, params) => {
+  try {
+    console.log('Выполняется SQL запрос:', query);
+    console.log('Параметры запроса:', params);
+    const result = await promisePool.query(query, params);
+    return result;
+  } catch (error) {
+    console.error('Ошибка SQL запроса:', error.message);
+    console.error('Запрос:', query);
+    console.error('Параметры:', params);
+    throw error;
+  }
+};
+
+module.exports = {
+  query: logQuery
+}; 

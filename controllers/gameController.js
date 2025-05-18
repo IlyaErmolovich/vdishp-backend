@@ -37,7 +37,8 @@ exports.getGameById = async (req, res) => {
 // Создание новой игры (только для админов)
 exports.createGame = async (req, res) => {
   try {
-    const { title, developer, publisher, release_date, genres, platforms } = req.body;
+    const { title, developer, publisher, release_date } = req.body;
+    let { genres, platforms } = req.body;
     
     // Проверка наличия обязательных полей
     if (!title || !developer || !publisher || !release_date) {
@@ -59,8 +60,24 @@ exports.createGame = async (req, res) => {
     }
 
     // Преобразуем строки в массивы, если они пришли в виде строк
-    const gameGenres = typeof genres === 'string' ? genres.split(',') : genres;
-    const gamePlatforms = typeof platforms === 'string' ? platforms.split(',') : platforms;
+    if (typeof genres === 'string') {
+      genres = genres.split(',').map(g => g.trim());
+      console.log('Преобразованные жанры:', genres);
+    }
+    
+    if (typeof platforms === 'string') {
+      platforms = platforms.split(',').map(p => p.trim());
+      console.log('Преобразованные платформы:', platforms);
+    }
+
+    // Проверяем, что genres и platforms - массивы
+    if (!Array.isArray(genres)) {
+      genres = [];
+    }
+    
+    if (!Array.isArray(platforms)) {
+      platforms = [];
+    }
 
     // Создаем игру
     const game = await Game.create({
@@ -69,8 +86,8 @@ exports.createGame = async (req, res) => {
       publisher,
       release_date,
       cover_image,
-      genres: gameGenres,
-      platforms: gamePlatforms
+      genres,
+      platforms
     });
     
     res.status(201).json({
@@ -78,6 +95,7 @@ exports.createGame = async (req, res) => {
       game
     });
   } catch (error) {
+    console.error('Ошибка при создании игры:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -86,7 +104,8 @@ exports.createGame = async (req, res) => {
 exports.updateGame = async (req, res) => {
   try {
     const gameId = req.params.id;
-    const { title, developer, publisher, release_date, genres, platforms } = req.body;
+    const { title, developer, publisher, release_date } = req.body;
+    let { genres, platforms } = req.body;
     
     // Получаем существующую игру для возможного сохранения обложки
     const existingGame = await Game.getById(gameId);
@@ -101,8 +120,24 @@ exports.updateGame = async (req, res) => {
     }
 
     // Преобразуем строки в массивы, если они пришли в виде строк
-    const gameGenres = typeof genres === 'string' ? genres.split(',') : genres;
-    const gamePlatforms = typeof platforms === 'string' ? platforms.split(',') : platforms;
+    if (typeof genres === 'string') {
+      genres = genres.split(',').map(g => g.trim());
+      console.log('Преобразованные жанры при обновлении:', genres);
+    }
+    
+    if (typeof platforms === 'string') {
+      platforms = platforms.split(',').map(p => p.trim());
+      console.log('Преобразованные платформы при обновлении:', platforms);
+    }
+
+    // Проверяем, что genres и platforms - массивы
+    if (!Array.isArray(genres)) {
+      genres = existingGame.genres || [];
+    }
+    
+    if (!Array.isArray(platforms)) {
+      platforms = existingGame.platforms || [];
+    }
 
     // Обновляем игру
     const game = await Game.update(gameId, {
@@ -111,8 +146,8 @@ exports.updateGame = async (req, res) => {
       publisher,
       release_date,
       cover_image,
-      genres: gameGenres,
-      platforms: gamePlatforms
+      genres,
+      platforms
     });
     
     res.json({
@@ -120,6 +155,7 @@ exports.updateGame = async (req, res) => {
       game
     });
   } catch (error) {
+    console.error('Ошибка при обновлении игры:', error);
     res.status(500).json({ message: error.message });
   }
 };

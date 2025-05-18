@@ -122,15 +122,21 @@ class Game {
       // Добавляем жанры
       if (genres && genres.length > 0) {
         for (const genreName of genres) {
-          // Получаем ID жанра
-          const [genreResults] = await db.query('SELECT id FROM genres WHERE name = ?', [genreName]);
-          
-          if (genreResults.length > 0) {
-            const genreId = genreResults[0].id;
-            await db.query(
-              'INSERT INTO game_genres (game_id, genre_id) VALUES (?, ?)',
-              [newId, genreId]
-            );
+          try {
+            // Получаем ID жанра, используя подготовленные запросы для избежания проблем с кавычками
+            const [genreResults] = await db.query('SELECT id FROM genres WHERE name = ?', [genreName]);
+            
+            if (genreResults.length > 0) {
+              const genreId = genreResults[0].id;
+              await db.query(
+                'INSERT INTO game_genres (game_id, genre_id) VALUES (?, ?)',
+                [newId, genreId]
+              );
+            } else {
+              console.log(`Жанр не найден: ${genreName}`);
+            }
+          } catch (genreError) {
+            console.error(`Ошибка при добавлении жанра "${genreName}":`, genreError);
           }
         }
       }
@@ -138,15 +144,21 @@ class Game {
       // Добавляем платформы
       if (platforms && platforms.length > 0) {
         for (const platformName of platforms) {
-          // Получаем ID платформы
-          const [platformResults] = await db.query('SELECT id FROM platforms WHERE name = ?', [platformName]);
-          
-          if (platformResults.length > 0) {
-            const platformId = platformResults[0].id;
-            await db.query(
-              'INSERT INTO game_platforms (game_id, platform_id) VALUES (?, ?)',
-              [newId, platformId]
-            );
+          try {
+            // Получаем ID платформы, используя подготовленные запросы
+            const [platformResults] = await db.query('SELECT id FROM platforms WHERE name = ?', [platformName]);
+            
+            if (platformResults.length > 0) {
+              const platformId = platformResults[0].id;
+              await db.query(
+                'INSERT INTO game_platforms (game_id, platform_id) VALUES (?, ?)',
+                [newId, platformId]
+              );
+            } else {
+              console.log(`Платформа не найдена: ${platformName}`);
+            }
+          } catch (platformError) {
+            console.error(`Ошибка при добавлении платформы "${platformName}":`, platformError);
           }
         }
       }
@@ -201,39 +213,59 @@ class Game {
 
       // Обновляем жанры
       if (genres && genres.length > 0) {
-        // Удаляем текущие жанры
-        await db.query('DELETE FROM game_genres WHERE game_id = ?', [id]);
+        try {
+          // Удаляем текущие жанры
+          await db.query('DELETE FROM game_genres WHERE game_id = ?', [id]);
 
-        // Добавляем новые жанры
-        for (const genreName of genres) {
-          const [genreResults] = await db.query('SELECT id FROM genres WHERE name = ?', [genreName]);
-          
-          if (genreResults.length > 0) {
-            const genreId = genreResults[0].id;
-            await db.query(
-              'INSERT INTO game_genres (game_id, genre_id) VALUES (?, ?)',
-              [id, genreId]
-            );
+          // Добавляем новые жанры
+          for (const genreName of genres) {
+            try {
+              const [genreResults] = await db.query('SELECT id FROM genres WHERE name = ?', [genreName]);
+              
+              if (genreResults.length > 0) {
+                const genreId = genreResults[0].id;
+                await db.query(
+                  'INSERT INTO game_genres (game_id, genre_id) VALUES (?, ?)',
+                  [id, genreId]
+                );
+              } else {
+                console.log(`Жанр не найден при обновлении: ${genreName}`);
+              }
+            } catch (genreError) {
+              console.error(`Ошибка при обновлении жанра "${genreName}":`, genreError);
+            }
           }
+        } catch (genresError) {
+          console.error('Ошибка при обновлении жанров:', genresError);
         }
       }
 
       // Обновляем платформы
       if (platforms && platforms.length > 0) {
-        // Удаляем текущие платформы
-        await db.query('DELETE FROM game_platforms WHERE game_id = ?', [id]);
+        try {
+          // Удаляем текущие платформы
+          await db.query('DELETE FROM game_platforms WHERE game_id = ?', [id]);
 
-        // Добавляем новые платформы
-        for (const platformName of platforms) {
-          const [platformResults] = await db.query('SELECT id FROM platforms WHERE name = ?', [platformName]);
-          
-          if (platformResults.length > 0) {
-            const platformId = platformResults[0].id;
-            await db.query(
-              'INSERT INTO game_platforms (game_id, platform_id) VALUES (?, ?)',
-              [id, platformId]
-            );
+          // Добавляем новые платформы
+          for (const platformName of platforms) {
+            try {
+              const [platformResults] = await db.query('SELECT id FROM platforms WHERE name = ?', [platformName]);
+              
+              if (platformResults.length > 0) {
+                const platformId = platformResults[0].id;
+                await db.query(
+                  'INSERT INTO game_platforms (game_id, platform_id) VALUES (?, ?)',
+                  [id, platformId]
+                );
+              } else {
+                console.log(`Платформа не найдена при обновлении: ${platformName}`);
+              }
+            } catch (platformError) {
+              console.error(`Ошибка при обновлении платформы "${platformName}":`, platformError);
+            }
           }
+        } catch (platformsError) {
+          console.error('Ошибка при обновлении платформ:', platformsError);
         }
       }
 
